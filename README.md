@@ -113,22 +113,87 @@ Flash with the included script (reliable two-step):
 .\flash.ps1
 ```
 
-**OLED layout:**
+## OLED display reference
 
-```mermaid
-flowchart TD
-  subgraph OLED["128x64 OLED"]
-    Title["RINGOFFIRE   (or yellow NO MIDI alarm)"]
-    Corners["CC2 top-left   CC1 top-right"]
-    Bars["4 big bars F1 F2 F3 F4<br/>= per-fixture tremor intensity"]
-    Mini["mini strip: CC1 CC2 CC3 CC4 CC5 CC6 CC7 CC8"]
-  end
-  Title --> Corners --> Bars --> Mini
+**Module:** 0.96" 128x64 I2C OLED, SSD1306/SSD1315 driver, address `0x3C`,
+**yellow top band (rows 0-15) + blue bottom band (rows 16-63)**.
+Wired to SDA=pin 18, SCL=pin 19, powered 3.3V.
+
+The display has two screens: a **splash** at boot, then the **live view**.
+
+### Splash screen (first 3 s at boot)
+
+```
++--------------------------------+
+|         RINGOFFIRE             |  <- yellow band, size 2 title
+|  ----------------------------  |
+|      v1.1  2026-09-28          |  <- blue band: version + release date
+|    Sep 28 2026 22:09:13        |  <- build timestamp (auto, exact)
+|    Teensy 4.1  #5560969        |  <- board + git commit hash
++--------------------------------+
 ```
 
-- **F1-F4 bars** tremble with the sound (raw envelope).
-- **NO MIDI**: if nothing arrives for >1.5 s, the title row becomes a solid
-  yellow banner with black "NO MIDI" text.
+| Field | Meaning | Trust it? |
+|---|---|---|
+| `v1.1` | `FW_VERSION` define, bumped per release | manual |
+| `2026-09-28` | `FW_DATE` define, release date | manual |
+| `Sep 28 2026 22:09:13` | `BUILD_STAMP` = `__DATE__`+`__TIME__`, captured at compile | **exact** — proves the binary |
+| `#5560969` | `FW_COMMIT` git short hash | **approximate** — always one commit behind (the hash can't know itself before commit) |
+
+**Same info over USB serial** (115200 baud), machine-readable, so you or a
+script can verify a deployed unit without reading the screen:
+
+```
+[FW] name=RingoffireCC2DMX
+[FW] version=v1.1
+[FW] date=2026-09-28
+[FW] commit=5560969
+[FW] build=Sep 28 2026 22:09:13
+[FW] features=4xTW600 7ch | CC2 tremor | NO-MIDI alarm
+[FW] fixtures=4
+[FW] dmx_channels=28
+```
+
+> **Source of truth:** the build timestamp (`BUILD_STAMP` / `[FW] build=`) is
+> always exact. `FW_VERSION`/`FW_DATE`/`FW_COMMIT` are manual and may lag.
+
+### Live view (normal operation)
+
+```
++--------------------------------+
+| 41   RINGOFFIRE            100 |  <- yellow band: CC2 (left) | title | CC1 (right)
++--------------------------------+
+|  __   __   __   __   |         |
+| |  | |  | |  | |  |  | |||     |  <- blue band
+| |##| |  | |# | |  |  | |||     |     F1-F4 bars (tremor)  |  CC1..CC8 mini strip
+| |##| |# | |# | |# |  | |||     |
+|  F1   F2   F3   F4   |         |
++--------------------------------+
+```
+
+| Element | What it shows |
+|---|---|
+| **CC2** (top-left) | raw tremor value arriving from Reaper (0-127) |
+| **CC1** (top-right) | master brightness received (0-127); 0 = lights dark |
+| **F1-F4 bars** | per-fixture tremor intensity (the 4 ring heads) |
+| **CC mini strip** | live value of each control CC (CC1..CC8) |
+
+### Live view (NO MIDI alarm)
+
+If no mapped CC arrives for **>1.5 s**, the yellow band inverts to a solid
+alarm banner:
+
+```
++--------------------------------+
+|########## NO MIDI #############|  <- inverted yellow band = ALARM
++--------------------------------+
+|  __   __   __   __   |         |
+| |  | |  | |  | |  |  |         |  <- bars keep last state (DMX still runs)
++--------------------------------+
+```
+
+This means: **Teensy is running but not receiving** — check the USB cable,
+Reaper's MIDI routing, or the plugin. It is not a crash; DMX output continues.
 
 ---
 
