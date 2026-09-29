@@ -167,27 +167,25 @@ void showSplash() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  // Title, size 2, centered in the yellow band
+  // Title: size 2 is 16px tall, occupies the yellow band (y0-15).
+  // RINGOFFIRE at size2 ~ 10 chars * 11px = 110px wide, centered.
   display.setTextSize(2);
   const char* title = "RINGOFFIRE";
-  int tw = (int)strlen(title) * 12 - 4;
+  int tw = (int)strlen(title) * 11;       // ~11px per size-2 char incl. spacing
   if (tw > SCREEN_WIDTH) tw = SCREEN_WIDTH;
-  display.setCursor((SCREEN_WIDTH - tw) / 2, 2);
+  display.setCursor((SCREEN_WIDTH - tw) / 2, 0);
   display.print(title);
 
-  display.drawLine(0, 17, SCREEN_WIDTH - 1, 17, SSD1306_WHITE);
-
-  // Line 1: version + date
+  // Blue band (y16-31): two size-1 lines, 8px apart, no overlap.
   display.setTextSize(1);
   char l1[28];
   snprintf(l1, sizeof(l1), "%s %s", FW_VERSION, FW_DATE);
   int w1 = (int)strlen(l1) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - w1) / 2, 19);
+  display.setCursor((SCREEN_WIDTH - w1) / 2, 18);   // version + date
   display.print(l1);
 
-  // Line 2: build timestamp (auto, proves the exact binary)
   int w2 = (int)strlen(BUILD_STAMP) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - w2) / 2, 26);
+  display.setCursor((SCREEN_WIDTH - w2) / 2, 26);   // build timestamp
   display.print(BUILD_STAMP);
   display.display();
 }
