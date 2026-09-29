@@ -112,10 +112,10 @@ void drawFaders() {
     display.setCursor((SCREEN_WIDTH - titleW) / 2, 0);
     display.print(title);
   } else {
-    // Alarm: full-width banner, black text on white (yellow band on this OLED)
-    display.fillRect(0, 0, SCREEN_WIDTH, 9, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK);
-    display.setCursor((SCREEN_WIDTH - 42) / 2, 1);
+    // Alarm: invert just the yellow band (y0-7), black text, no bleed into blue
+    display.fillRect(0, 0, SCREEN_WIDTH, 8, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);  // black on filled band
+    display.setCursor((SCREEN_WIDTH - 42) / 2, 0);       // "NO MIDI" = 7 chars x6 = 42
     display.print("NO MIDI");
     display.setTextColor(SSD1306_WHITE);
   }
@@ -162,26 +162,24 @@ void showSplash() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  // Title, size 2, centered
+  // Title, size 2, centered in the yellow band (y0-15)
   display.setTextSize(2);
   const char* title = "RINGOFFIRE";
-  int tw = (int)strlen(title) * 12 - 2;   // size2: ~12px per char
-  display.setCursor((SCREEN_WIDTH - tw) / 2, 1);
+  int tw = (int)strlen(title) * 12 - 4;   // tighter width estimate
+  if (tw > SCREEN_WIDTH) tw = SCREEN_WIDTH;
+  display.setCursor((SCREEN_WIDTH - tw) / 2, 2);
   display.print(title);
 
-  // Version + date, size 1, centered
+  // Divider line under the title
+  display.drawLine(0, 17, SCREEN_WIDTH - 1, 17, SSD1306_WHITE);
+
+  // Version + date on one centered line, then board on the next
   display.setTextSize(1);
-  char line[24];
+  char line[28];
   snprintf(line, sizeof(line), "%s  %s", FW_VERSION, FW_DATE);
   int lw = (int)strlen(line) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - lw) / 2, 18);
+  display.setCursor((SCREEN_WIDTH - lw) / 2, 20);
   display.print(line);
-
-  const char* sub = "Teensy 4.1  CC2DMX";
-  int sw = (int)strlen(sub) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - sw) / 2, 26);
-  display.print(sub);
-
   display.display();
 }
 
@@ -276,6 +274,13 @@ void updateEngine() {
 
 // ---------------------------------------------------------------------------
 void setup() {
+  // USB serial (Serial+MIDI USB type): version banner for the monitor
+  Serial.begin(115200);
+  Serial.print("RingoffireCC2DMX ");
+  Serial.print(FW_VERSION);
+  Serial.print("  ");
+  Serial.println(FW_DATE);
+
   Wire.begin();
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
     pinMode(LED_BUILTIN, OUTPUT);
