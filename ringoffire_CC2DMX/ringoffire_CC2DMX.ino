@@ -331,13 +331,13 @@ void loop() {
   bool midiActive = false;
   while (usbMIDI.read()) {
     if (usbMIDI.getType() == usbMIDI.ControlChange) {
+      lastMidiMs = millis();   // any CC message = link is alive (feeds watchdog)
       byte control = usbMIDI.getData1();
       byte value   = usbMIDI.getData2();
       for (int i = 0; i < NUM_CC; i++) {
         if (control == ccList[i]) {
           ccValues[control] = value;
           midiActive = true;
-          lastMidiMs = millis();   // feed the watchdog
           break;
         }
       }

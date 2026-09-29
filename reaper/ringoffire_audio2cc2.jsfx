@@ -15,7 +15,7 @@ slider13:-60<-90,-20,0.5>Noise floor (dB)
 slider14:-12<-60,0,0.5>Full scale (dB)
 
 @init
-env = 0; last_cc = -1;
+env = 0; last_cc = -1; hb = 0;
 boot = 0;                       // counts blocks; stagger the first CC push
 i = 0; while (i < 8) ( lastp[i] = -1; i += 1; );
 // CC numbers shown in the monitor bars (order matches the bar display)
@@ -54,11 +54,14 @@ boot == 30 ? (
   midisend(0, 0xB0, 7, slider6 | 0);
   midisend(0, 0xB0, 8, slider7 | 0);
 );
-// tremor envelope -> CC2 on channel 1, on change
+// tremor envelope -> CC2 on channel 1. Send on change, plus a periodic
+// heartbeat so a pinned value (e.g. loud audio holds CC2=127) never looks
+// like a dead link to the Teensy's NO-MIDI watchdog.
 t = (env - floor_lin) / (ceil_lin - floor_lin);
 t = min(max(t, 0), 1);
 cc = (t * 127) | 0;
-cc != last_cc ? ( midisend(0, 0xB0, 2, cc); last_cc = cc; );
+hb += 1;
+(cc != last_cc || hb >= 25) ? ( midisend(0, 0xB0, 2, cc); last_cc = cc; hb = 0; );
 
 @gfx 460 300
 gfx_clear = -1;
