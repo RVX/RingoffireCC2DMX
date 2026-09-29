@@ -67,6 +67,20 @@ flowchart TD
 MAX3485 is 3.3V native ? correct for Teensy 4.1 (not 5V tolerant). Set each
 Thunder Wash to **7-CH Mode_1**, start addresses **1, 8, 15, 22**.
 
+### MAX3485 (RS-485) -> XLR wiring — **critical, get this right**
+
+The most common wiring fault is swapping the differential pair. For a standard
+3-pin XLR DMX output:
+
+| MAX3485 module terminal | XLR pin | DMX signal |
+|---|---|---|
+| **A+** | **Pin 3** | Data + (true / non-inverted) |
+| **B-** | **Pin 2** | Data - (complement / inverted) |
+| **Ground / Shield** | **Pin 1** | Ground / shield |
+
+> **A+ goes to XLR pin 3, B- to XLR pin 2.** If you swap them, the fixtures
+> receive garbage and stay dark. Verified on the bench: A+ -> pin 3.
+
 ---
 
 ## The two pieces
@@ -257,6 +271,10 @@ committed as the working reference.
 
 - `ringoffire_CC2DMX/` ? Teensy 4.1 firmware
 - `reaper/ringoffire_audio2cc2.jsfx` ? Reaper audio->CC plugin
+- `OMR_DMX_TEST/` ? standalone hardware test: cycles all 4 fixtures through
+  RED/GREEN/BLUE/WHITE/OFF with the step shown on the OLED. No MIDI/Reaper.
+  Use it to verify wiring + addressing. Reflash the main firmware with
+  `.\flash.ps1` afterward.
 - `datasheets/` ? Thunder Wash DMX control table
 - `flash.ps1` ? one-command Teensy flasher
 
