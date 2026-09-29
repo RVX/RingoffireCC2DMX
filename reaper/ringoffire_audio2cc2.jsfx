@@ -1,0 +1,134 @@
+desc:Ring of Fire - Volcano light controller
+// Audio (master send) -> tremor -> 4x DMX lights via Teensy.
+// Sliders are short on purpose so they don't clip. Full explanation in README.
+
+slider1:100<0,127,1>Master brightness
+slider2:20<0,127,1>Threshold
+slider3:64<0,127,1>Gain
+slider4:60<0,127,1>Decay (fade-out)
+slider5:90<0,127,1>Color heat
+slider6:0<0,127,1>Ring rotation
+slider7:0<0,127,1>Peak strobe
+slider11:10<1,200,1>Audio attack (ms)
+slider12:150<20,2000,10>Audio release (ms)
+slider13:-60<-90,-20,0.5>Noise floor (dB)
+slider14:-12<-60,0,0.5>Full scale (dB)
+
+@init
+env = 0; last_cc = -1;
+boot = 0;                       // counts blocks; stagger the first CC push
+i = 0; while (i < 8) ( lastp[i] = -1; i += 1; );
+// CC numbers shown in the monitor bars (order matches the bar display)
+ccn[0]=1; ccn[1]=2; ccn[2]=3; ccn[3]=4; ccn[4]=5; ccn[5]=6; ccn[6]=7; ccn[7]=8;
+
+@slider
+att = exp(-1 / (srate * max(slider11,1) / 1000));
+rel = exp(-1 / (srate * max(slider12,20) / 1000));
+floor_lin = 10 ^ (slider13 / 20);
+ceil_lin  = 10 ^ (slider14 / 20);
+
+@sample
+peak = max(abs(spl0), abs(spl1));
+env = peak > env ? att*env + (1-att)*peak
+                 : rel*env + (1-rel)*peak;
+
+@block
+// stagger startup: push one control CC every ~50 blocks (~1s apart at 48k/1024)
+// so the Teensy isn't hit with a burst the instant the plugin reloads.
+boot += 1;
+boot >= 50 && boot % 50 == 0 ? (
+  idx = (boot / 50) - 1;
+  idx >= 0 && idx < 7 ? lastp[idx] = -1;   // force that one CC to send this block
+);
+
+// LIGHT sliders -> CC1,3,4,5,6,7,8 on channel 1 (on change)
+pcc[0]=1; pv[0]=slider1;
+pcc[1]=3; pv[1]=slider2;
+pcc[2]=4; pv[2]=slider3;
+pcc[3]=5; pv[3]=slider4;
+pcc[4]=6; pv[4]=slider5;
+pcc[5]=7; pv[5]=slider6;
+pcc[6]=8; pv[6]=slider7;
+i = 0;
+while (i < 7) (
+  v = pv[i] | 0;
+  v != lastp[i] ? ( midisend(0, 0xB0, pcc[i], v); lastp[i] = v; );
+  i += 1;
+);
+// tremor envelope -> CC2 on channel 1, on change
+t = (env - floor_lin) / (ceil_lin - floor_lin);
+t = min(max(t, 0), 1);
+cc = (t * 127) | 0;
+cc != last_cc ? ( midisend(0, 0xB0, 2, cc); last_cc = cc; );
+
+@gfx 460 300
+gfx_clear = -1;
+gfx_r = 0.10; gfx_g = 0.10; gfx_b = 0.12;
+gfx_rect(0, 0, gfx_w, gfx_h);
+
+// ---- title, big, centered ----
+gfx_setfont(1, "Arial", 26, 'b');
+gfx_r = 1; gfx_g = 0.55; gfx_b = 0.15;
+gfx_measurestr("RING OF FIRE", tw, th);
+gfx_x = (gfx_w - tw) / 2; gfx_y = 8;
+gfx_drawstr("RING OF FIRE");
+
+// ---- audio input bar, full width ----
+lvl_db = 20 * log10(max(env, 0.000000001));
+t = (lvl_db - slider13) / (slider14 - slider13);
+t = min(max(t, 0), 1);
+gfx_r = 0.25; gfx_g = 0.25; gfx_b = 0.28; gfx_rect(20, 46, gfx_w - 40, 20);
+gfx_r = 0.20; gfx_g = 0.90; gfx_b = 0.40; gfx_rect(20, 46, t * (gfx_w - 40), 20);
+gfx_setfont(2, "Arial", 14);
+gfx_r = 0.7; gfx_g = 0.7; gfx_b = 0.7;
+gfx_measurestr("AUDIO INPUT (volcano sound)", lw, lh);
+gfx_x = (gfx_w - lw) / 2; gfx_y = 70;
+gfx_drawstr("AUDIO INPUT (volcano sound)");
+
+// ---- big tremor number, centered ----
+gfx_setfont(3, "Arial", 54, 'b');
+sprintf(#num, "%d", cc);
+gfx_r = 1; gfx_g = 0.75; gfx_b = 0.20;
+gfx_measurestr(#num, nw, nh);
+gfx_x = (gfx_w - nw) / 2; gfx_y = 92;
+gfx_drawstr(#num);
+
+// ---- caption under the number ----
+gfx_setfont(2, "Arial", 14);
+gfx_r = 0.7; gfx_g = 0.7; gfx_b = 0.7;
+gfx_measurestr("TREMOR SENT TO LIGHTS  (0-127)", cw, ch);
+gfx_x = (gfx_w - cw) / 2; gfx_y = 152;
+gfx_drawstr("TREMOR SENT TO LIGHTS  (0-127)");
+
+// ---- status line ----
+sprintf(#st, "audio level: %.1f dB", lvl_db);
+gfx_measurestr(#st, sw, sh);
+gfx_x = (gfx_w - sw) / 2; gfx_y = 182;
+gfx_drawstr(#st);
+
+// ---- live CC monitor: 8 bars = what the Teensy should show ----
+gfx_setfont(2, "Arial", 12);
+monv[0]=slider1; monv[1]=cc;      monv[2]=slider2; monv[3]=slider3;
+monv[4]=slider4; monv[5]=slider5; monv[6]=slider6; monv[7]=slider7;
+monx = 20; monw = 44; mongap = 8; montop = 208; monbot = 284; monh = monbot - montop;
+i = 0;
+while (i < 8) (
+  x = monx + i * (monw + mongap);
+  h = (monv[i] / 127) * monh;
+  gfx_r = 0.30; gfx_g = 0.30; gfx_b = 0.34;
+  gfx_rect(x, montop, monw, monh);                 // empty frame
+  gfx_r = 0.95; gfx_g = 0.55; gfx_b = 0.15;        // fire orange
+  h > 0 ? gfx_rect(x, monbot - h, monw, h);        // fill
+  // label + value, centered under bar
+  sprintf(#lab, "CC%d", ccn[i]);
+  gfx_r = 0.7; gfx_g = 0.7; gfx_b = 0.7;
+  gfx_measurestr(#lab, lw2, lh2);
+  gfx_x = x + (monw - lw2)/2; gfx_y = monbot + 2;
+  gfx_drawstr(#lab);
+  sprintf(#val, "%d", monv[i] | 0);
+  gfx_r = 1; gfx_g = 1; gfx_b = 1;
+  gfx_measurestr(#val, vw, vh);
+  gfx_x = x + (monw - vw)/2; gfx_y = montop - 14;
+  gfx_drawstr(#val);
+  i += 1;
+);
