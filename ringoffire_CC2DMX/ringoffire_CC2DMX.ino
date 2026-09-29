@@ -25,11 +25,16 @@
 #include <TeensyDMX.h>
 
 // ---------------------------------------------------------------------------
-// Firmware version (shown on the splash screen so you can spot what's flashed)
+// Firmware identity (splash screen + USB serial). Bump FW_VERSION each release.
+// BUILD_STAMP auto-captures the compile date+time so the exact binary is
+// identifiable later without trusting the manual date.
 // ---------------------------------------------------------------------------
-#define FW_VERSION   "v1.0"
+#define FW_NAME      "RingoffireCC2DMX"
+#define FW_VERSION   "v1.1"
 #define FW_DATE      "2026-09-28"
-#define SPLASH_MS    2500   // how long the welcome screen shows
+#define FW_FEATURES  "4xTW600 7ch | CC2 tremor | NO-MIDI alarm"
+#define BUILD_STAMP  __DATE__ " " __TIME__   // e.g. "Sep 28 2026 18:03:11"
+#define SPLASH_MS    3000   // how long the welcome screen shows
 
 // ---------------------------------------------------------------------------
 // Fixtures & DMX layout (7-CH Mode_1 per fixture)
@@ -162,25 +167,42 @@ void showSplash() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  // Title, size 2, centered in the yellow band (y0-15)
+  // Title, size 2, centered in the yellow band
   display.setTextSize(2);
   const char* title = "RINGOFFIRE";
-  int tw = (int)strlen(title) * 12 - 4;   // tighter width estimate
+  int tw = (int)strlen(title) * 12 - 4;
   if (tw > SCREEN_WIDTH) tw = SCREEN_WIDTH;
   display.setCursor((SCREEN_WIDTH - tw) / 2, 2);
   display.print(title);
 
-  // Divider line under the title
   display.drawLine(0, 17, SCREEN_WIDTH - 1, 17, SSD1306_WHITE);
 
-  // Version + date on one centered line, then board on the next
+  // Line 1: version + date
   display.setTextSize(1);
-  char line[28];
-  snprintf(line, sizeof(line), "%s  %s", FW_VERSION, FW_DATE);
-  int lw = (int)strlen(line) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - lw) / 2, 20);
-  display.print(line);
+  char l1[28];
+  snprintf(l1, sizeof(l1), "%s %s", FW_VERSION, FW_DATE);
+  int w1 = (int)strlen(l1) * 6 - 1;
+  display.setCursor((SCREEN_WIDTH - w1) / 2, 19);
+  display.print(l1);
+
+  // Line 2: build timestamp (auto, proves the exact binary)
+  int w2 = (int)strlen(BUILD_STAMP) * 6 - 1;
+  display.setCursor((SCREEN_WIDTH - w2) / 2, 26);
+  display.print(BUILD_STAMP);
   display.display();
+}
+
+// Machine-readable identity over USB serial. Open the Serial Monitor and the
+// tagged lines can be grepped by you or by a script to verify what's flashed.
+void printIdentity() {
+  Serial.begin(115200);
+  Serial.println(F("[FW] name=" FW_NAME));
+  Serial.println(F("[FW] version=" FW_VERSION));
+  Serial.println(F("[FW] date=" FW_DATE));
+  Serial.print(F("[FW] build="));  Serial.println(BUILD_STAMP);
+  Serial.println(F("[FW] features=" FW_FEATURES));
+  Serial.print(F("[FW] fixtures=")); Serial.println(NUM_FIXTURES);
+  Serial.print(F("[FW] dmx_channels=")); Serial.println(DMX_CHANNELS);
 }
 
 // ---------------------------------------------------------------------------
@@ -274,12 +296,8 @@ void updateEngine() {
 
 // ---------------------------------------------------------------------------
 void setup() {
-  // USB serial (Serial+MIDI USB type): version banner for the monitor
-  Serial.begin(115200);
-  Serial.print("RingoffireCC2DMX ");
-  Serial.print(FW_VERSION);
-  Serial.print("  ");
-  Serial.println(FW_DATE);
+  // USB serial identity block (machine-readable, see printIdentity)
+  printIdentity();
 
   Wire.begin();
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
