@@ -25,6 +25,13 @@
 #include <TeensyDMX.h>
 
 // ---------------------------------------------------------------------------
+// Firmware version (shown on the splash screen so you can spot what's flashed)
+// ---------------------------------------------------------------------------
+#define FW_VERSION   "v1.0"
+#define FW_DATE      "2026-09-28"
+#define SPLASH_MS    2500   // how long the welcome screen shows
+
+// ---------------------------------------------------------------------------
 // Fixtures & DMX layout (7-CH Mode_1 per fixture)
 // ---------------------------------------------------------------------------
 #define NUM_FIXTURES    4
@@ -134,7 +141,9 @@ void drawFaders() {
   }
 
   // 3. Mini CC strip (right side): 8 thin meters for M TR TH GN DC HT RT ST
+  // Vertical divider separates the F1-F4 bars from the CC monitor strip
   const int stripX = leftPad + NUM_FIXTURES * (barW + gap) + 6;  // ~90
+  display.drawLine(stripX - 3, barTop, stripX - 3, barBottom, SSD1306_WHITE);
   int mx = stripX;
   for (int i = 0; i < NUM_CC; i++) {
     int mh = map(ccValues[ccList[i]], 0, 127, 0, barH);
@@ -142,6 +151,36 @@ void drawFaders() {
     else        display.drawPixel(mx, barBottom - 1, SSD1306_WHITE);
     mx += 5;
   }
+
+  display.display();
+}
+
+// ---------------------------------------------------------------------------
+// Splash screen (version + date), shown for SPLASH_MS at startup
+// ---------------------------------------------------------------------------
+void showSplash() {
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Title, size 2, centered
+  display.setTextSize(2);
+  const char* title = "RINGOFFIRE";
+  int tw = (int)strlen(title) * 12 - 2;   // size2: ~12px per char
+  display.setCursor((SCREEN_WIDTH - tw) / 2, 1);
+  display.print(title);
+
+  // Version + date, size 1, centered
+  display.setTextSize(1);
+  char line[24];
+  snprintf(line, sizeof(line), "%s  %s", FW_VERSION, FW_DATE);
+  int lw = (int)strlen(line) * 6 - 1;
+  display.setCursor((SCREEN_WIDTH - lw) / 2, 18);
+  display.print(line);
+
+  const char* sub = "Teensy 4.1  CC2DMX";
+  int sw = (int)strlen(sub) * 6 - 1;
+  display.setCursor((SCREEN_WIDTH - sw) / 2, 26);
+  display.print(sub);
 
   display.display();
 }
@@ -245,13 +284,9 @@ void setup() {
       digitalWrite(LED_BUILTIN, LOW);  delay(1000);
     }
   }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println("RINGOFFIRE CC2DMX");
-  display.println("Teensy 4.1 ready");
-  display.display();
+  // Welcome splash (version + date), then move on
+  showSplash();
+  delay(SPLASH_MS);
 
   dmx.begin();
   // Safe start: every channel at 0 (all fixtures dark, strobe open)
