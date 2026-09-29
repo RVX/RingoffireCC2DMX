@@ -237,7 +237,7 @@ void updateEngine() {
   uint16_t master = ccValues[1];                 // CC1 master brightness
   uint16_t level  = ccValues[2] * 2;             // CC2 audio envelope 0-254
   uint16_t thr    = ccValues[3] * 2;             // CC3 threshold 0-254
-  uint16_t gain   = map(ccValues[4], 0, 127, 16, 512);  // CC4 gain (x0.25..x8)
+  uint16_t gain   = map(ccValues[4], 0, 127, 8, 128);  // CC4 gain (x0.125..x2, mid~1x)
   uint16_t decay  = map(ccValues[5], 0, 127, 12, 1);    // CC5 fall per tick
   uint16_t heat   = ccValues[6] * 2;             // CC6 color heat 0-254
   uint16_t rotate = map(ccValues[7], 0, 127, 0, 15);    // CC7 ticks offset/fixture
@@ -246,7 +246,7 @@ void updateEngine() {
   // Envelope: instant attack, linear decay
   int32_t target = 0;
   if (level > thr) {
-    target = ((int32_t)(level - thr) * gain) / 64;
+    target = ((int32_t)(level - thr) * gain) / 64;   // gain/64: 64 = unity
     if (target > 255) target = 255;
   }
   if ((int32_t)target > (int32_t)envelope) {
