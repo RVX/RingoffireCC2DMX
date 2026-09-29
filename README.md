@@ -33,7 +33,7 @@ flowchart TD
     PC["Computer<br/>(Reaper DAW)"]
     USB["USB cable"]
     Teensy["Teensy 4.1<br/>(USB MIDI device)"]
-    OLED["OLED SSD1306 128x32 I2C<br/>SDA pin 18 / SCL pin 19<br/>addr 0x3C"]
+    OLED["OLED SSD1306/SSD1315 128x64 I2C<br/>SDA pin 18 / SCL pin 19<br/>addr 0x3C"]
     RS485["MAX3485 module<br/>DE + RE tied to 3.3V"]
     XLR["DMX XLR out<br/>pin1 GND / pin2 D- / pin3 D+"]
     LED["Status LED<br/>pin 13"]
@@ -117,7 +117,7 @@ Flash with the included script (reliable two-step):
 
 ```mermaid
 flowchart TD
-  subgraph OLED["128x32 OLED"]
+  subgraph OLED["128x64 OLED"]
     Title["RINGOFFIRE   (or yellow NO MIDI alarm)"]
     Corners["CC2 top-left   CC1 top-right"]
     Bars["4 big bars F1 F2 F3 F4<br/>= per-fixture tremor intensity"]
