@@ -32,6 +32,7 @@
 #define FW_NAME      "RingoffireCC2DMX"
 #define FW_VERSION   "v1.1"
 #define FW_DATE      "2026-09-28"
+#define FW_COMMIT    "ecbc7d3"   // git short hash (update on each release)
 #define FW_FEATURES  "4xTW600 7ch | CC2 tremor | NO-MIDI alarm"
 #define BUILD_STAMP  __DATE__ " " __TIME__   // e.g. "Sep 28 2026 18:03:11"
 #define SPLASH_MS    3000   // how long the welcome screen shows
@@ -117,10 +118,10 @@ void drawFaders() {
     display.setCursor((SCREEN_WIDTH - titleW) / 2, 0);
     display.print(title);
   } else {
-    // Alarm: invert just the yellow band (y0-7), black text, no bleed into blue
-    display.fillRect(0, 0, SCREEN_WIDTH, 8, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);  // black on filled band
-    display.setCursor((SCREEN_WIDTH - 42) / 2, 0);       // "NO MIDI" = 7 chars x6 = 42
+    // Alarm: invert the whole yellow band (y0-15) with black text
+    display.fillRect(0, 0, SCREEN_WIDTH, 16, SSD1306_WHITE);
+    display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    display.setCursor((SCREEN_WIDTH - 42) / 2, 4);   // "NO MIDI" vertically centered in band
     display.print("NO MIDI");
     display.setTextColor(SSD1306_WHITE);
   }
@@ -131,8 +132,9 @@ void drawFaders() {
   display.print(ccValues[1]);   // CC1 master actually received (0-127)
 
   // 2. Four large bars: live intensity of each ring head (F1..F4)
-  const int barTop = 12;
-  const int barBottom = SCREEN_HEIGHT - 12;     // room for labels below
+  // Yellow band is y0-15; bars start below it so they never overlap it.
+  const int barTop = 17;
+  const int barBottom = SCREEN_HEIGHT - 11;     // room for labels below
   const int barH = barBottom - barTop;
   const int barW = 13, gap = 7, leftPad = 4;
   for (int f = 0; f < NUM_FIXTURES; f++) {
@@ -187,9 +189,11 @@ void showSplash() {
   display.setCursor((SCREEN_WIDTH - ((int)strlen(BUILD_STAMP) * 6 - 1)) / 2, 42);
   display.print(BUILD_STAMP);
 
-  const char* sub = "Teensy 4.1";
-  display.setCursor((SCREEN_WIDTH - ((int)strlen(sub) * 6 - 1)) / 2, 54);
-  display.print(sub);
+  // Board + commit hash (verifiable identity of the flashed binary)
+  char l3[28];
+  snprintf(l3, sizeof(l3), "Teensy 4.1  #%s", FW_COMMIT);
+  display.setCursor((SCREEN_WIDTH - ((int)strlen(l3) * 6 - 1)) / 2, 54);
+  display.print(l3);
   display.display();
 }
 
@@ -200,6 +204,7 @@ void printIdentity() {
   Serial.println(F("[FW] name=" FW_NAME));
   Serial.println(F("[FW] version=" FW_VERSION));
   Serial.println(F("[FW] date=" FW_DATE));
+  Serial.println(F("[FW] commit=" FW_COMMIT));
   Serial.print(F("[FW] build="));  Serial.println(BUILD_STAMP);
   Serial.println(F("[FW] features=" FW_FEATURES));
   Serial.print(F("[FW] fixtures=")); Serial.println(NUM_FIXTURES);
