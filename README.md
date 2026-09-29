@@ -221,6 +221,38 @@ Full fixture DMX table: `datasheets/CLTW600RGBW-dmx_control_table--D004114-en.pd
 
 ---
 
+## Current state & known issues (work in progress)
+
+**Working:**
+- Teensy 4.1 firmware: compiles, flashes, drives 4x Thunder Wash, splash screen
+  with version/date/build/commit, NO-MIDI alarm banner, machine-readable serial
+  identity (`[FW] ...` at 115200 baud).
+- Reaper plugin receives audio and produces CC2 (tremor envelope) -> F1-F4
+  react to the sound.
+- Control CCs (CC1, CC3-CC8) are received by the Teensy.
+
+**Known issues / open problems (to revisit):**
+- **Control-CC reactivity is inconsistent.** Slider changes are sent from
+  `@slider`, but Reaper only flushes them to the hardware while the track's
+  MIDI is actively processed (during playback / armed+monitored). Result:
+  slider changes can appear to lag until a transport state change. Needs a
+  reliable always-on send path.
+- **Envelope follower tuning is fragile.** Several DSP variants were tried
+  (per-sample follower, peak-hold, block-RMS). The per-sample follower works
+  but the response on sustained low-frequency rumble vs. transients is not
+  fully satisfying. The RMS attempt had a coefficient bug (smoothing factor
+  collapsed to ~0) and was reverted. Needs a clean, tested envelope design.
+- **JSFX UI** is functional but plain; monitor bars show `CCn=value` per bar
+  but the layout could be clearer about which slider maps to which bar.
+- **Display geometry assumption:** the module is 128x64 (SSD1306/SSD1315) with
+  a yellow top band (rows 0-15). Early code assumed 128x32 and looked jammed;
+  fixed, but worth confirming on the final production unit's exact panel.
+
+**Last known-good baseline:** git commit `37aef73` (plugin) — restored and
+committed as the working reference.
+
+---
+
 ## Files
 
 - `ringoffire_CC2DMX/` ? Teensy 4.1 firmware
