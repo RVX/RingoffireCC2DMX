@@ -79,7 +79,7 @@ uint8_t dmxValues[DMX_CHANNELS + 1] = {0}; // 1-based
 // OLED
 // ---------------------------------------------------------------------------
 #define SCREEN_WIDTH  128
-#define SCREEN_HEIGHT 32
+#define SCREEN_HEIGHT 64   // this module is 128x64 (SSD1306 / SSD1315)
 #define OLED_RESET    -1
 #define OLED_ADDR     0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -131,8 +131,8 @@ void drawFaders() {
   display.print(ccValues[1]);   // CC1 master actually received (0-127)
 
   // 2. Four large bars: live intensity of each ring head (F1..F4)
-  const int barTop = 9;
-  const int barBottom = SCREEN_HEIGHT - 9;      // 9px reserved for labels/strip
+  const int barTop = 12;
+  const int barBottom = SCREEN_HEIGHT - 12;     // room for labels below
   const int barH = barBottom - barTop;
   const int barW = 13, gap = 7, leftPad = 4;
   for (int f = 0; f < NUM_FIXTURES; f++) {
@@ -140,7 +140,7 @@ void drawFaders() {
     int h = map(fixtureDim[f], 0, 255, 0, barH);
     display.drawRect(x, barTop, barW, barH, SSD1306_WHITE);
     if (h > 0) display.fillRect(x + 2, barBottom - h, barW - 4, h, SSD1306_WHITE);
-    display.setCursor(x + 1, barBottom + 1);    // F-label under each bar
+    display.setCursor(x + 1, barBottom + 2);    // F-label under each bar
     display.print('F');
     display.print(f + 1);
   }
@@ -167,26 +167,29 @@ void showSplash() {
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
-  // Title: size 2 is 16px tall, occupies the yellow band (y0-15).
-  // RINGOFFIRE at size2 ~ 10 chars * 11px = 110px wide, centered.
+  // Title: size 2 (16px tall), centered, upper area
   display.setTextSize(2);
   const char* title = "RINGOFFIRE";
-  int tw = (int)strlen(title) * 11;       // ~11px per size-2 char incl. spacing
+  int tw = (int)strlen(title) * 12;
   if (tw > SCREEN_WIDTH) tw = SCREEN_WIDTH;
-  display.setCursor((SCREEN_WIDTH - tw) / 2, 0);
+  display.setCursor((SCREEN_WIDTH - tw) / 2, 6);
   display.print(title);
 
-  // Blue band (y16-31): two size-1 lines, 8px apart, no overlap.
+  display.drawLine(8, 26, SCREEN_WIDTH - 9, 26, SSD1306_WHITE);
+
+  // Info lines, size 1, well spaced (8px per line + gaps)
   display.setTextSize(1);
   char l1[28];
-  snprintf(l1, sizeof(l1), "%s %s", FW_VERSION, FW_DATE);
-  int w1 = (int)strlen(l1) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - w1) / 2, 18);   // version + date
+  snprintf(l1, sizeof(l1), "%s  %s", FW_VERSION, FW_DATE);
+  display.setCursor((SCREEN_WIDTH - ((int)strlen(l1) * 6 - 1)) / 2, 32);
   display.print(l1);
 
-  int w2 = (int)strlen(BUILD_STAMP) * 6 - 1;
-  display.setCursor((SCREEN_WIDTH - w2) / 2, 26);   // build timestamp
+  display.setCursor((SCREEN_WIDTH - ((int)strlen(BUILD_STAMP) * 6 - 1)) / 2, 42);
   display.print(BUILD_STAMP);
+
+  const char* sub = "Teensy 4.1";
+  display.setCursor((SCREEN_WIDTH - ((int)strlen(sub) * 6 - 1)) / 2, 54);
+  display.print(sub);
   display.display();
 }
 
